@@ -1,3 +1,5 @@
+
+
 import 'package:app_loja/datas/cart_product.dart';
 import 'package:app_loja/models/user_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -14,9 +16,8 @@ class CartModel extends Model {
 
   bool isLoading = false;
 
-  CartModel(this.user){
-    if(user.isLoggedIn())
-      _loadCartItem();
+  CartModel(this.user) {
+    if (user.isLoggedIn()) _loadCartItem();
   }
   //Habilitando o CartModel para acessar de qualquer lugar do aplicativo
   static CartModel of(BuildContext context) =>
@@ -70,16 +71,85 @@ class CartModel extends Model {
   }
 
   void _loadCartItem() async {
-    QuerySnapshot query =  await Firestore.instance
-          .collection('users').document(user.firebaseUser.uid).collection('cart').getDocuments();
+    QuerySnapshot query = await Firestore.instance
+        .collection('users')
+        .document(user.firebaseUser.uid)
+        .collection('cart')
+        .getDocuments();
 
-     products = query.documents.map((doc) => CartProduct.fromDocument(doc)).toList();
+    products =
+        query.documents.map((doc) => CartProduct.fromDocument(doc)).toList();
 
-     notifyListeners();
+    notifyListeners();
   }
 
-  void setCoupon(String couponCode, int discounPercentage){
+  void setCoupon(String couponCode, int discounPercentage) {
     this.couponCode = couponCode;
     this.discountPercentage = discounPercentage;
+  }
+
+  double getProductsPrice() {
+    double price = 0.0;
+    for (CartProduct c in products) {
+      if (c.getProductData() != null) {
+        price += c.getQuantity() * c.getProductData().getPrice();
+      }
+    }
+    return price;
+  }
+
+  double getDiscount() {
+    return getProductsPrice() * this.discountPercentage / 100;
+  }
+
+  //adicionar o calculo do frete depois - agora o valor esta fixo
+  double getShipPrice() {
+    return 9.99;
+  }
+
+  void updatePrice() {
+    notifyListeners();
+  }
+
+  Future<String> finishOrder() async {
+    if (products.length == 0) return null;
+    isLoading = true;
+    notifyListeners();
+    double productsPrice = getProductsPrice();
+    double shipPrice = getShipPrice();
+    double discount = getDiscount();
+
+    DocumentReference refOrder =
+        await Firestore.instance.collection('orders').add({
+      'clientId': user.firebaseUser.uid,
+      'products': products.map((cartProduct) => cartProduct.topMap()).toList(),
+      'shipPrice': shipPrice,
+      'productPrice': productsPrice,
+      'discount': discount,
+      'totalPrice': productsPrice - discount + shipPrice,
+      'status': 1
+    });
+    await Firestore.instance
+        .collection('users')
+        .document(user.firebaseUser.uid)
+        .collection('orders')
+        .document(refOrder.documentID)
+        .setData({'orderId': refOrder});
+
+    QuerySnapshot query = await Firestore.instance
+        .collection('users')
+        .document(user.firebaseUser.uid)
+        .collection('cart')
+        .getDocuments();
+
+    for (DocumentSnapshot doc in query.documents) {
+      doc.reference.delete();
+    }
+    products.clear();
+    discountPercentage = 0;
+    couponCode = null;
+    isLoading = false;
+    notifyListeners();
+    return refOrder.documentID;
   }
 }

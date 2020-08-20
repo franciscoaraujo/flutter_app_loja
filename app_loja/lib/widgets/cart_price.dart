@@ -15,6 +15,9 @@ CartPrice(this.buy);
         padding: EdgeInsets.all(16.0),
         child: ScopedModelDescendant<CartModel>(
           builder: (context, child, model) {
+            
+            double total = model.getProductsPrice() + model.getShipPrice() + model.getDiscount();
+
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
@@ -27,17 +30,17 @@ CartPrice(this.buy);
                 ),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: <Widget>[Text('Subtotal'), Text('R\$ 0.00')],
+                  children: <Widget>[Text('Subtotal'), Text('R\$ ${model.getProductsPrice().toStringAsFixed(2)}')],
                 ),
                 Divider(),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: <Widget>[Text('Desconto'), Text('R\$ 0.00')],
+                  children: <Widget>[Text('Desconto'), Text('R\$ ${model.getDiscount().toStringAsFixed(2)}')],
                 ),
                 Divider(),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: <Widget>[Text('Entrega'), Text('R\$ 0.00')],
+                  children: <Widget>[Text('Entrega'), Text('R\$ ${ model.getShipPrice().toStringAsFixed(2)}')],
                 ),
                 Divider(),
                 SizedBox(
@@ -50,7 +53,7 @@ CartPrice(this.buy);
                       'Total',
                       style: TextStyle(fontWeight: FontWeight.w500),
                     ),
-                    Text('R\$ 0.00',
+                    Text('R\$ ${total.toStringAsFixed(2)}',
                         style: TextStyle(
                             color: Theme.of(context).primaryColor,
                             fontSize: 18.0))
